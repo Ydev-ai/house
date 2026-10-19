@@ -230,6 +230,20 @@ button,select,input,label{touch-action:manipulation}
 .kstat span{font-size:12px;color:var(--muted)}
 .mod{display:flex;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px}
 .mod select{flex:1}
+
+.btn{white-space:nowrap;flex:none}
+.syncstat{font-size:12.5px;color:var(--muted);margin:-8px 0 14px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.syncstat .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:1px}
+.syncask{border:2.5px solid var(--ink);background:var(--hl);color:#1f1d1a;border-radius:14px;padding:10px 14px;margin:0 0 14px;box-shadow:4px 4px 0 var(--ink);font-size:14px}
+.syncask .btnrow{margin-top:6px}
+.dlg{border:2.5px solid var(--ink);border-radius:18px;padding:0;background:var(--card);color:var(--ink);box-shadow:6px 6px 0 var(--ink);width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 40px)}
+.dlg::backdrop{background:rgba(0,0,0,.35)}
+.dlgin{padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.dlghd{display:flex;justify-content:space-between;align-items:center;font-size:18px}
+.fld{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:700}
+.fld input{font:inherit;font-size:15px;color:var(--ink);background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:9px 10px}
+.guide{margin:0;padding-left:20px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+.guide a{color:var(--accent);font-weight:700}
 </style>
 </head>
 <body>
@@ -250,10 +264,36 @@ button,select,input,label{touch-action:manipulation}
         <button data-th="dark">어둡게</button>
         <button data-th="eye">눈 편하게</button>
       </div>
-      <button class="btn" id="saveBtn" title="지금 배치를 파일로 저장">저장</button>
-      <label class="btn" title="저장한 배치 파일 불러오기">불러오기<input type="file" id="loadIn" accept=".json,application/json" hidden></label>
+      <button class="btn primary" id="ghSave" title="지금 배치를 GitHub에 올려서 같이 보기">함께 저장</button>
+      <button class="btn" id="syncOpen" title="저장 설정">저장 설정</button>
     </div>
   </header>
+  <div id="syncStat" class="syncstat"></div>
+  <div id="syncAsk" class="syncask" hidden></div>
+  <dialog id="syncDlg" class="dlg">
+    <form method="dialog" class="dlgin">
+      <div class="dlghd"><b>저장 설정</b><button class="btn ghost" value="close">닫기</button></div>
+      <p class="hint" style="margin:0 0 10px">이 휴대폰에는 바꿀 때마다 <b>자동 저장</b>돼요. <b>함께 저장</b>을 누르면 GitHub에 올라가서, 링크를 여는 다른 사람도 같은 배치를 봐요.</p>
+      <label class="fld">저장하는 사람<input id="ghWho" placeholder="예: 남편, 아내" maxlength="12"></label>
+      <label class="fld">GitHub 키 (토큰)<input id="ghTok" type="password" autocomplete="off" placeholder="github_pat_로 시작하는 키 붙여넣기"></label>
+      <div class="btnrow"><button class="btn primary" type="button" id="ghKeySave">키 저장 · 연결 확인</button><button class="btn" type="button" id="ghPull">최신 배치 불러오기</button><button class="btn ghost" type="button" id="ghKeyDel">이 휴대폰에서 키 지우기</button></div>
+      <p id="ghMsg" class="hint" style="margin:8px 0 0"></p>
+      <details style="margin-top:12px"><summary>키 만드는 법 (처음 한 번)</summary><div class="inner">
+        <ol class="guide">
+          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub 새 키 만들기 화면</a>을 열어요. (Settings → Developer settings → Fine-grained tokens)</li>
+          <li><b>Token name</b>: house-layout · <b>Expiration</b>: 1년 정도</li>
+          <li><b>Resource owner</b>: Ydev-ai · <b>Repository access</b>: Only select repositories → <b>house</b>만 선택</li>
+          <li><b>Permissions → Repository permissions → Contents</b>: <b>Read and write</b> (다른 건 그대로)</li>
+          <li><b>Generate token</b>을 누르고 나온 키를 복사해서 위 칸에 붙여넣어요.</li>
+        </ol>
+        <p class="hint">키는 이 휴대폰 브라우저에만 저장돼요. 휴대폰을 잃어버리면 같은 화면에서 키를 지우세요(Revoke).</p>
+      </div></details>
+      <details><summary>파일로 저장 · 열기</summary><div class="inner btnrow">
+        <button class="btn" type="button" id="saveBtn">파일로 저장</button>
+        <label class="btn">파일 열기<input type="file" id="loadIn" accept=".json,application/json" hidden></label>
+      </div></details>
+    </form>
+  </dialog>
 
   <section id="tabHouse">
     <div class="main">
@@ -375,15 +415,11 @@ button,select,input,label{touch-action:manipulation}
 
 <script>
 const DEF = {
-  mirror:true, sys:'fit', corner:true,
-  d:{vD:580,vH:2000,tl:625,win:1490,tr:615,R:2285,L:1440,B:2165,sill:1060,winH:1100,ceil:2300,dp:600,cH:2030,sW:600,sD:620,sH:1965,sOff:110},
+  mirror:true, sys:'fit', corner:'butt',
+  d:{vD:589,vH:2000,vCor:400,tl:625,win:1490,tr:615,R:2285,L:1440,B:2165,sill:1060,winH:1100,ceil:2300,dp:600,cH:2030,sW:600,sD:620,sH:1965,sOff:110},
   wr:[
-    {name:'옷장 ①',wall:'R',w:1300,comps:[
-      {cat:'out',hang:2,drawer:false,mirror:true},
-      {cat:'in',hang:2,drawer:false,mirror:false}]},
-    {name:'옷장 ②',wall:'B',w:1200,comps:[
-      {cat:'in',hang:1,drawer:false,mirror:false},
-      {cat:'out',hang:2,drawer:false,mirror:false}]}
+    {name:'옷장 ①',wall:'R',w:2200,comps:[{cat:'out',hang:0,drawer:false,mirror:true,w:550},{cat:'out',hang:2,drawer:false,mirror:false,w:550},{cat:'in',hang:2,drawer:false,mirror:false,w:1100}]},
+    {name:'옷장 ②',wall:'B',w:1200,comps:[{cat:'in',hang:1,drawer:false,mirror:false,w:600},{cat:'out',hang:2,drawer:false,mirror:false,w:600}]}
   ],
   dev:[
     {id:1,type:'outlet',seg:3,off:1315,h:300},
@@ -400,7 +436,7 @@ const DIMS = [
   ['벽 길이',null],
   ['L','짧은 벽 (스타일러 쪽)',false],['R','긴 벽 (옷장 쪽)',false],['B','하단 벽',false],
   ['가구',null],
-  ['dp','프리핏 옷장 깊이',false],['cH','프리핏 옷장 높이',false],['vD','빈트 옷장 깊이',true],['vH','빈트 옷장 높이',true],
+  ['dp','프리핏 옷장 깊이',false],['cH','프리핏 옷장 높이',false],['vD','빈트 옷장 깊이',false],['vH','빈트 옷장 높이',true],['vCor','빈트 코너장 크기',true],
   ['sW','스타일러 폭',false],['sD','스타일러 깊이',false],['sH','스타일러 높이',false],['sOff','스타일러 위치 (창문벽에서)',true],
 ];
 
@@ -417,23 +453,25 @@ function geo(){
     {a:[W,D],b:[W-B,D],n:[0,-1]},
   ];
   let c=0; segs.forEach(s=>{s.len=Math.hypot(s.b[0]-s.a[0],s.b[1]-s.a[1]);s.c=c;c+=s.len});
-  const vint=S.sys==='vint', rd=vint?d.vD:dp, rh=vint?d.vH:d.cH, cs=S.corner?900:rd;
+  const vint=S.sys==='vint', rd=vint?d.vD:dp, rh=vint?d.vH:d.cH, cm=CM();
+  const csR=cm==='unit'?900:cm==='butt'?0:rd, csB=cm==='unit'?900:rd, cs=csB;
   const furn=[
     {n:'스타일러',k:'sty',x:0,y:d.sOff,w:d.sD,h:d.sW,fh:d.sH,lines:['스타일러','5벌용',d.sW+''],front:'r'},
   ];
-  if(S.corner) furn.unshift({n:'코너장',k:'cor',x:W-900,y:D-900,w:900,h:900,fh:d.cH,corner:true});
-  else furn.unshift({n:'막힌 모서리',k:'dead',x:W-rd,y:D-rd,w:rd,h:rd,fh:0,dead:true});
+  if(cm==='unit') furn.unshift({n:'코너장',k:'cor',x:W-900,y:D-900,w:900,h:900,fh:d.cH,corner:true});
+  else if(cm==='vcorner'){ const u=Math.min(d.vCor||400,rd); furn.unshift({n:'코너장',k:'cor',x:W-u,y:D-u,w:u,h:u,fh:rh,vcorner:true,sq:rd}); }
+  else if(cm==='dead') furn.unshift({n:'막힌 모서리',k:'dead',x:W-rd,y:D-rd,w:rd,h:rd,fh:0,dead:true});
   const wrs=S.wr.map((wr,wi)=>{
     const sp=wrInfo(wr), n=wr.comps.length, cw=wr.w/n;
     const o={wi,wr,sp,cw,rd};
     const off=Math.max(0,wr.off||0); o.off=off;
-    if(wr.wall==='R'){ o.x=W-rd; o.y=D-cs-off-wr.w; o.w=rd; o.h=wr.w; o.avail=D-cs; }
-    else { o.x=W-cs-off-wr.w; o.y=D-rd; o.w=wr.w; o.h=rd; o.avail=B-cs; }
+    if(wr.wall==='R'){ o.x=W-rd; o.y=D-csR-off-wr.w; o.w=rd; o.h=wr.w; o.avail=D-csR; }
+    else { o.x=W-csB-off-wr.w; o.y=D-rd; o.w=wr.w; o.h=rd; o.avail=B-csB; }
     o.gap=o.avail-wr.w-off;
     let acc=0;
     wr.comps.forEach((c,i)=>{
-      const w_=vint?c.w:cw;
-      const r = wr.wall==='R' ? {x:W-rd,y:o.y+acc,w:rd,h:w_,front:'l'} : {x:W-cs-off-acc-w_,y:D-rd,w:w_,h:rd,front:'t'};
+      const w_=c.w||cw;
+      const r = wr.wall==='R' ? {x:W-rd,y:o.y+acc,w:rd,h:w_,front:'l'} : {x:W-csB-off-acc-w_,y:D-rd,w:w_,h:rd,front:'t'};
       acc+=w_;
       const nm=vint?VMOD[c.mod].n:HANG[c.hang]+(c.drawer?' + 서랍':'');
       furn.push(Object.assign(r,{n:`${wr.name} ${i+1}${vint?'번 모듈':'통'}`,k:c.mirror?'mir':(c.cat==='out'?'out':'inn'),fh:rh,
@@ -441,8 +479,12 @@ function geo(){
     });
     return o;
   });
-  return {W,D,L,B,dp:rd,segs,total:c,furn,wrs,cs,rh};
+  let blind=0;
+  if(cm==='butt'){ const oR=wrs.find(o=>o.wr.wall==='R'); if(oR) blind=Math.max(0,Math.min(oR.y+oR.h,D)-Math.max(oR.y,D-rd)); }
+  return {W,D,L,B,dp:rd,segs,total:c,furn,wrs,cs,csR,csB,rh,cm,blind};
 }
+function CM(){ const c=S.corner; if(c===true)return'unit'; if(c===false)return'dead'; if(S.sys==='vint'&&(c==='unit'||c==='butt'))return'vcorner'; if(S.sys!=='vint'&&c==='vcorner')return'unit'; return c||'butt'; }
+const CMN={unit:'코너장 900',butt:'맞대기 (데드 없이)',dead:'모서리 비움',vcorner:'코너장 400'};
 const CAT={out:'아웃도어',in:'인도어'};
 const HANG={2:'2단 행거',1:'1단 행거',0:'선반형'};
 function wrSpec(w){ return w<=1100?{doors:2,n:1}:w<=2200?{doors:2,n:2}:{doors:3,n:3}; }
@@ -452,9 +494,15 @@ function wrInfo(wr){
   return wrSpec(wr.w);
 }
 function autoFill(sys,corner){
-  S.sys=sys; S.corner=corner; const d=S.d, W=d.tl+d.win+d.tr, rd=sys==='vint'?d.vD:d.dp, cs=corner?900:rd;
+  S.sys=sys; S.corner=corner; const cm=CM(); S.corner=cm; const d=S.d, W=d.tl+d.win+d.tr, rd=sys==='vint'?d.vD:d.dp;
+  const csR=cm==='unit'?900:cm==='butt'?0:rd, csB=cm==='unit'?900:rd;
   S.wr.forEach(wr=>{
-    wr.off=0; const avail=(wr.wall==='R'?d.R:Math.min(d.B,W))-cs, R=wr.wall==='R';
+    wr.off=0; const R=wr.wall==='R', avail=(R?d.R-csR:Math.min(d.B,W)-csB);
+    if(sys==='vint'&&cm==='vcorner'){
+      const plan=R?[{mod:'h2',w:800,cat:'out',mirror:true},{mod:'h2',w:800,cat:'in',mirror:false}]:[{mod:'h2',w:800,cat:'out',mirror:false},{mod:'long',w:400,cat:'in',mirror:false},{mod:'long',w:400,cat:'in',mirror:false}];
+      wr.comps=plan; syncComps(wr); return;
+    }
+    if(sys==='fit'&&cm==='butt'){ wr.w=R?2200:1200; wr.comps=R?[{cat:'out',hang:0,drawer:false,mirror:true,w:550},{cat:'out',hang:2,drawer:false,mirror:false,w:550},{cat:'in',hang:2,drawer:false,mirror:false,w:1100}]:[{cat:'in',hang:1,drawer:false,mirror:false,w:600},{cat:'out',hang:2,drawer:false,mirror:false,w:600}]; syncComps(wr); return; }
     if(sys==='fit'){
       wr.w=Math.max(1000,Math.min(2200,Math.floor(avail/100)*100));
       wr.comps=R?[{cat:'out',hang:2,drawer:false,mirror:true},{cat:'in',hang:2,drawer:false,mirror:false}]:[{cat:'in',hang:1,drawer:false,mirror:false},{cat:'out',hang:2,drawer:false,mirror:false}];
@@ -469,7 +517,14 @@ function autoFill(sys,corner){
 }
 function syncComps(wr){
   if(S.sys==='vint'){ wr.comps.forEach(c=>{const m=VMOD[c.mod]||VMOD.h2;c.hang=m.hang;c.drawer=!!m.drawer;}); wr.w=wr.comps.reduce((a,c)=>a+c.w,0); return; }
-  wr.comps.forEach(c=>{delete c.mod;delete c.w;});
+  wr.comps.forEach(c=>{delete c.mod;});
+  if(wr.comps.some(c=>c.w)){
+    const eq=wr.w/wr.comps.length; const cur=wr.comps.map(c=>c.w||eq), tot=cur.reduce((a,b)=>a+b,0)||1;
+    let acc=0; wr.comps.forEach((c,i)=>{ c.w=i<wr.comps.length-1?Math.round(cur[i]/tot*wr.w/10)*10:wr.w-acc; acc+=c.w; });
+    if(wr.w<1200) wr.comps.forEach(c=>c.drawer=false);
+    return;
+  }
+  wr.comps.forEach(c=>{delete c.w;});
   const n=wrSpec(wr.w).n;
   while(wr.comps.length<n) wr.comps.push({cat:'in',hang:2,drawer:false,mirror:false});
   wr.comps.length=n;
@@ -525,7 +580,7 @@ function free(g){
   const shortLeft=R0(g.L-d.sOff-d.sW);   // 짧은 벽: 스타일러 아래 남는 벽
   // 바닥 면적: 방 전체 - 가구 바닥면적
   const room=(g.W*g.D)/1e6;
-  const used=g.furn.reduce((a,f)=>a+f.w*f.h,0)/1e6 - (S.corner?(900-S.d.dp)**2/1e6:0); // 코너 입구는 바닥
+  const used=g.furn.reduce((a,f)=>a+f.w*f.h,0)/1e6 - (CM()==='unit'?(900-S.d.dp)**2/1e6:0); // 코너 입구는 바닥
   return {pw,pd,fullW,shortLeft,area:room-used,room,
     gapA:A?A.gap:0, gapB:Bw?Bw.gap:0, top:d.sOff, winL:d.tl-d.sD, winR:d.tr-g.dp};
 }
@@ -534,14 +589,18 @@ function wardStats(){
   const iD=vint?(d.vD-t-t):(d.dp-t-80), iH=g.rh-base-2*t;
   let vol=0, rod=0, drawers=0, mods=0, swing=0;
   g.wrs.forEach(o=>{ o.wr.comps.forEach(c=>{
-    const w_=vint?c.w:o.cw, iW=vint?w_-2*t:w_-t;
+    const w_=c.w||o.cw, iW=vint?w_-2*t:w_-t;
     vol+=iW*iD*iH; rod+=iW*(c.hang||0); mods++;
     if(c.drawer) drawers+=vint?3:2;
     if(vint) swing=Math.max(swing,c.w>=800?c.w/2:c.w);
   });});
-  if(S.corner){ const ci=900-2*t, e=900-d.dp+t; vol+=(ci*ci-e*e)*(d.cH-base-2*t); rod+=1100; }
+  const cm=g.cm; let blindVol=0;
+  if(cm==='unit'){ const ci=900-2*t, e=900-d.dp+t; vol+=(ci*ci-e*e)*(d.cH-base-2*t); rod+=1100; }
+  if(cm==='vcorner'){ const ci=Math.min(d.vCor||400,d.vD)-2*t; vol+=ci*ci*iH; }
+  if(cm==='butt'&&g.blind>0){ blindVol=g.blind*iD*iH/1e9; }
   const F=free(g);
-  return {vol:vol/1e9, rod:rod/1000, hangers:Math.floor(rod/50), drawers, mods, swing,
+  const lens=g.wrs.map(o=>o.wr.w+(o.wr.wall==='R'?g.csR:g.csB)+(o.off||0));
+  return {vol:vol/1e9, rod:rod/1000, hangers:Math.floor(rod/50), drawers, mods, swing, blind:g.blind, blindVol, lens, cm,
     walk:F.pw, walkOpen:F.pw-swing, widths:g.wrs.map(o=>o.wr.w), gaps:g.wrs.map(o=>o.gap)};
 }
 function scenarioStats(sys,corner){
@@ -552,19 +611,22 @@ function renderSysPick(){
   const st=wardStats(), vint=S.sys==='vint';
   document.getElementById('sysPick').innerHTML=`
     <div class="sysrow"><div class="seg" data-g="sys"><button data-v="fit" class="${!vint?'on':''}">프리핏 슬라이딩</button><button data-v="vint" class="${vint?'on':''}">빈트 시스템</button></div>
-    <div class="seg" data-g="corner"><button data-v="1" class="${S.corner?'on':''}">코너장 있음</button><button data-v="0" class="${!S.corner?'on':''}">코너장 없음</button></div></div>
+    <div class="seg" data-g="corner">${(vint?['vcorner','dead']:['butt','unit','dead']).map(k=>`<button data-v="${k}" class="${CM()===k?'on':''}">${CMN[k]}</button>`).join('')}</div></div>
     <div class="kstat"><div><b>${st.vol.toFixed(2)}㎥</b><span>옷장 안쪽 부피</span></div><div><b>${st.rod.toFixed(1)}m</b><span>옷 거는 봉 길이</span></div><div><b>약 ${st.hangers}벌</b><span>옷걸이 기준 (5cm/벌)</span></div></div>
-    <p class="hint" style="margin:8px 0 0">${vint?`여닫이 문이라 문 열 때 앞에 ${st.swing}mm가 필요해요 → 문 열면 통로 ${st.walkOpen}mm. 빈트 깊이·높이는 짐작값(${S.d.vD}×${S.d.vH})이에요.`:'슬라이딩 문이라 문 여는 공간이 따로 필요 없어요. 폭은 100mm 단위 맞춤이에요.'}${S.corner?' 코너장은 입구 300mm로 들어가서 쓰는 L자 수납이에요.':' 코너장이 없으면 두 옷장이 만나는 모서리 칸은 막혀서 못 써요.'}</p>`;
+    <p class="hint" style="margin:8px 0 0">${vint?`여닫이 문이라 문 열 때 앞에 ${st.swing}mm가 필요해요 → 문 열면 통로 ${st.walkOpen}mm. 빈트 깊이 ${S.d.vD}mm, 높이는 짐작값(${S.d.vH})이에요.`:'슬라이딩 문이라 문 여는 공간이 따로 필요 없어요. 폭은 100mm 단위 맞춤이에요.'} ${({unit:'코너장은 입구 300mm로 들어가서 쓰는 L자 수납이에요.',
+       butt:`긴 벽 옷장을 모서리까지 붙이고 아래 벽 옷장을 그 앞에 맞대요. 버려지는 빈칸은 없지만, 긴 벽 옷장의 모서리 쪽 ${st.blind}mm는 앞이 막혀 옷을 옆으로 밀어서 꺼내야 해요(약 ${st.blindVol.toFixed(2)}㎥).`,
+       dead:'두 옷장이 만나는 모서리 칸은 비워 둬서 못 써요.',
+       vcorner:`코너장 ${S.d.vCor}×${S.d.vCor}를 벽 모서리 안쪽에 붙이고, 옷장 깊이(${S.d.vD})와의 차이 ${S.d.vD-S.d.vCor}mm는 필러로 막아요. 그래서 모서리 칸이 ${S.d.vD}mm를 차지해 벽 따라 길이는 ${st.lens.join(' × ')}mm예요 (코너 포함).${st.gaps.some(v=>v<0)?` <b style="color:var(--warn)">아래 벽이 ${-Math.min(...st.gaps)}mm 모자라요 → 긴옷장 400 하나를 빼거나 400 모듈을 줄여야 해요.</b>`:''}`})[CM()]}</p>`;
 }
 function renderCmp(){
-  const rows=[['fit',true],['fit',false],['vint',true],['vint',false]].map(([sy,co])=>({sy,co,st:scenarioStats(sy,co)}));
+  const rows=[['fit','butt'],['fit','unit'],['fit','dead'],['vint','vcorner'],['vint','dead']].map(([sy,co])=>({sy,co,st:scenarioStats(sy,co)}));
   const mv=Math.max(...rows.map(r=>r.st.vol)), mr=Math.max(...rows.map(r=>r.st.rod));
-  document.getElementById('cmpTbl').innerHTML=`<table class="cmp"><tr><th>방식</th><th>코너장</th><th>옷장 폭 (긴 벽 / 아래 벽)</th><th>안쪽 부피</th><th>봉 길이</th><th>옷걸이</th><th>서랍</th><th>문</th><th></th></tr>`+
-   rows.map(r=>{const cur=r.sy===S.sys&&r.co===S.corner;return `<tr class="${cur?'cur':''}"><td><b>${SYSN[r.sy]}</b></td><td>${r.co?'있음':'없음'}</td><td>${r.st.widths.join(' / ')}</td>
+  document.getElementById('cmpTbl').innerHTML=`<table class="cmp"><tr><th>방식</th><th>모서리</th><th>옷장 폭 (긴 벽 / 아래 벽)</th><th>안쪽 부피</th><th>봉 길이</th><th>옷걸이</th><th>서랍</th><th>문</th><th></th></tr>`+
+   rows.map(r=>{const cur=r.sy===S.sys&&r.co===CM();return `<tr class="${cur?'cur':''}"><td><b>${SYSN[r.sy]}</b></td><td>${CMN[r.co]}${r.st.blind?`<br><small style="color:var(--muted)">앞 막힘 ${r.st.blind}mm</small>`:''}</td><td>${r.st.widths.join(' / ')}<br><small style="color:var(--muted)">벽 따라 ${r.st.lens.join(' × ')}</small></td>
     <td class="num ${r.st.vol===mv?'best':''}">${r.st.vol.toFixed(2)}㎥<span class="bar" style="width:${Math.round(r.st.vol/mv*100)}%"></span></td>
     <td class="num ${r.st.rod===mr?'best':''}">${r.st.rod.toFixed(1)}m<span class="bar" style="width:${Math.round(r.st.rod/mr*100)}%;background:var(--sw)"></span></td>
     <td class="num">${r.st.hangers}벌</td><td class="num">${r.st.drawers||'-'}</td><td>${r.sy==='fit'?'슬라이딩':'여닫이 (앞 '+r.st.swing+'mm)'}</td>
-    <td>${cur?'<span class="pill">지금</span>':`<button class="btn" data-cmp='${r.sy}|${r.co?1:0}'>이걸로 보기</button>`}</td></tr>`}).join('')+`</table>
+    <td>${cur?'<span class="pill">지금</span>':`<button class="btn" data-cmp='${r.sy}|${r.co}'>이걸로 보기</button>`}</td></tr>`}).join('')+`</table>
     <p class="hint" style="margin-top:8px">계산 기준: 판재 18mm, 받침 60mm, 슬라이딩 레일 80mm를 빼고 잰 안쪽 부피예요. 코너장 봉 길이는 1.1m로 짐작했어요. 빈트는 400/800mm 모듈로만 채워져서 남는 폭이 생길 수 있어요.</p>`;
 }
 function cordRec(dist){
@@ -600,6 +662,14 @@ function renderPlan(){
       s+=`<text x="${x+f.w/2}" y="${f.y+f.h/2}" text-anchor="middle" font-size="46" font-weight="700" style="fill:var(--muted)">막힌</text><text x="${x+f.w/2}" y="${f.y+f.h/2+56}" text-anchor="middle" font-size="46" font-weight="700" style="fill:var(--muted)">모서리</text>`;
       continue;
     }
+    if(f.vcorner){
+      const q=f.sq, qx=X(W-q,q), qy=D-q;
+      s+=`<rect x="${qx}" y="${qy}" width="${q}" height="${q}" fill="url(#ht)" stroke="${st}" stroke-width="6" stroke-dasharray="18 12"/>`;
+      s+=`<rect x="${x}" y="${f.y}" width="${f.w}" height="${f.h}" fill="${bg}" stroke="${st}" stroke-width="12"/>`;
+      s+=`<text x="${x+f.w/2}" y="${f.y+f.h/2-6}" text-anchor="middle" font-size="44" font-weight="700">코너장</text><text x="${x+f.w/2}" y="${f.y+f.h/2+44}" text-anchor="middle" font-size="38">${f.w}×${f.h}</text>`;
+      if(q>f.w) s+=`<text x="${qx+q/2}" y="${qy+(q-f.h)/2+14}" text-anchor="middle" font-size="34" style="fill:var(--muted)">필러 ${q-f.w}</text>`;
+      continue;
+    }
     if(f.corner){
       const e=900-S.d.dp, ex=X(W-900,e);
       if(e>0){
@@ -617,6 +687,9 @@ function renderPlan(){
     const cy=f.y+f.h/2-(f.lines.length-1)*36;
     f.lines.forEach((t,i)=>s+=`<text x="${x+f.w/2}" y="${cy+i*72+18}" text-anchor="middle" font-size="${i?46:56}" font-weight="${i?400:700}">${t}</text>`);
   }
+  if(g.cm==='butt'&&g.blind>0){ const bx=X(W-g.dp,g.dp), by=D-g.blind;
+    s+=`<rect x="${bx}" y="${by}" width="${g.dp}" height="${g.blind}" fill="url(#ht)" stroke="var(--warn)" stroke-width="8" stroke-dasharray="20 14"/>`;
+    s+=`<text x="${bx+g.dp/2}" y="${by+g.blind/2-10}" text-anchor="middle" font-size="40" font-weight="800" style="fill:var(--warn)">앞이 막힌</text><text x="${bx+g.dp/2}" y="${by+g.blind/2+38}" text-anchor="middle" font-size="40" font-weight="800" style="fill:var(--warn)">${g.blind}mm</text>`; }
   // 옷장 외곽 + 브래킷
   for(const o of g.wrs){
     const ox=X(o.x,o.w), bad=o.gap<0;
@@ -846,7 +919,7 @@ function renderWrCfg(){
         <select data-f="hang"><option value="2"${c.hang==2?' selected':''}>2단 행거</option><option value="1"${c.hang==1?' selected':''}>1단 행거</option><option value="0"${c.hang==0?' selected':''}>선반형</option></select>
         <label class="${canDr?'':'dis'}" title="${canDr?'':'1200 이상 행거형만 가능'}"><input type="checkbox" data-f="drawer"${c.drawer&&canDr?' checked':''}${canDr?'':' disabled'}>내부 서랍</label>
         <label><input type="checkbox" data-f="mirror"${c.mirror?' checked':''}>거울 도어</label>
-        <span class="pill">${R0(o.cw)}mm</span></div>`;
+        <span class="pill">${R0(c.w||o.cw)}mm</span><button class="btn ghost" data-f="split">반으로 나누기</button>${ci<wr.comps.length-1?'<button class="btn ghost" data-f="merge">다음 칸과 합치기</button>':''}</div>`;
     });
     h+=`</div>`;
   });
@@ -860,11 +933,10 @@ function renderWrSum(){
     return;
   }
   const n2=all.filter(c=>c.hang==2).length, n1=all.filter(c=>c.hang==1).length, n0=all.filter(c=>c.hang==0).length, nd=all.filter(c=>c.drawer).length;
-  const ok=all.length===4&&n2===3&&n1===1;
   const doors=S.wr.reduce((a,w)=>a+wrInfo(w).doors,0);
-  document.getElementById('wrSum').innerHTML=`<div class="r ${ok?'ok':'info'}"><span class="k">구성 요약 · 목표 4통 (2단 3 + 1단 1)</span>
-    <div class="big">총 ${all.length}통 · 도어 ${doors}개</div>2단 행거 <b>${n2}</b> · 1단 행거 <b>${n1}</b>${n0?` · 선반형 <b>${n0}</b>`:''} · 내부 서랍 <b>${nd}</b>
-    ${ok?' — 목표 구성과 일치 ✓':' — 목표 구성과 달라요'}</div>`;
+  const desc=S.wr.map(w=>`${w.name} ${w.w}: `+w.comps.map(c=>`${HANG[c.hang]}${c.drawer?'+서랍':''} ${R0(c.w||w.w/w.comps.length)}`).join(' · ')).join('<br>');
+  document.getElementById('wrSum').innerHTML=`<div class="r info"><span class="k">구성 요약 · 도어 ${doors}짝 · 칸 ${all.length}개</span>
+    2단 행거 <b>${n2}</b> · 1단 행거 <b>${n1}</b>${n0?` · 선반형 <b>${n0}</b>`:''}${nd?` · 내부 서랍 <b>${nd}</b>`:''}<div class="hint" style="margin-top:4px">${desc}</div></div>`;
 }
 function renderWrFront(){
   const d=S.d, vint=S.sys==='vint', H=vint?d.vH:d.cH, gapX=260;
@@ -877,7 +949,7 @@ function renderWrFront(){
     s+=`<text x="${ox+wr.w/2}" y="-110" text-anchor="middle" font-size="62" font-weight="700">${wr.name} · ${wr.w}</text>`;
     s+=`<text x="${ox+wr.w/2}" y="-40" text-anchor="middle" font-size="44" style="fill:var(--muted)">${vint?`모듈 ${sp.n}개 · 문 ${sp.doors}짝`:`도어 ${sp.doors} · 내부 ${sp.n}통`} · H ${H}</text>`;
     wr.comps.forEach((c,i)=>{
-      const cw=vint?c.w:cw0, x=ox+acc; acc+=cw; const k=c.mirror?'mir':(c.cat==='out'?'out':'inn'), [st,bg]=COL[k];
+      const cw=c.w||cw0, x=ox+acc; acc+=cw; const k=c.mirror?'mir':(c.cat==='out'?'out':'inn'), [st,bg]=COL[k];
       s+=`<rect x="${x}" y="0" width="${cw}" height="${H}" fill="${bg}" stroke="${st}" stroke-width="10"/>`;
       const drH=c.drawer?(vint?H-200:420):0;
       if(c.drawer){
@@ -960,7 +1032,7 @@ window.addEventListener('pointermove',e=>{
     const g=geo(), p0=svgPt(dLast), px=S.mirror?g.W-p0.x:p0.x, d=S.d;
     if(dDrag.t==='sty'){ d.sOff=R0(clamp(p0.y-dDrag.grab,0,g.L-d.sW)/10)*10; }
     else{
-      const o=g.wrs[dDrag.wi], wr=o.wr, R=wr.wall==='R', end=R?g.D-g.cs:g.W-g.cs;
+      const o=g.wrs[dDrag.wi], wr=o.wr, R=wr.wall==='R', end=R?g.D-g.csR:g.W-g.csB;
       if(dDrag.t==='move'){
         const start=(R?p0.y:px)-dDrag.grab;            // 옷장 시작점(창문/출입구 쪽)
         wr.off=R0(clamp(end-wr.w-start,0,Math.max(0,o.avail-wr.w))/10)*10;
@@ -1010,8 +1082,16 @@ list.addEventListener('click',e=>{
   if(e.target.tagName!=='SELECT'&&e.target.tagName!=='INPUT'){selId=id;renderAll();}
 });
 document.getElementById('wrCfg').addEventListener('click',e=>{
-  const f=e.target.dataset.f, wrEl=e.target.closest('.wr'); if(!f||!wrEl||S.sys!=='vint')return;
+  const f=e.target.dataset.f, wrEl=e.target.closest('.wr'); if(!f||!wrEl)return;
   const wr=S.wr[+wrEl.dataset.wi];
+  if(S.sys!=='vint'&&(f==='split'||f==='merge')){
+    const ci=+e.target.closest('.comp').dataset.ci, eq=wr.w/wr.comps.length;
+    wr.comps.forEach(c=>{if(!c.w)c.w=eq;});
+    if(f==='split'){ const c=wr.comps[ci], h=Math.round(c.w/2/10)*10; wr.comps.splice(ci,1,{...c,w:h},{...c,w:c.w-h,mirror:false}); }
+    if(f==='merge'&&ci<wr.comps.length-1){ const a=wr.comps[ci], b=wr.comps[ci+1]; wr.comps.splice(ci,2,{...a,w:a.w+b.w}); }
+    renderAll(); return;
+  }
+  if(S.sys!=='vint')return;
   if(f==='rm'){wr.comps.splice(+e.target.closest('.mod').dataset.ci,1);}
   if(f==='add8') wr.comps.push({mod:'h2',w:800,cat:'in',mirror:false});
   if(f==='add4') wr.comps.push({mod:'long',w:400,cat:'in',mirror:false});
@@ -1034,11 +1114,115 @@ document.getElementById('wrCfg').addEventListener('change',e=>{
 });
 document.getElementById('sysPick').addEventListener('click',e=>{
   const b=e.target.closest('[data-v]'), g=e.target.closest('[data-g]'); if(!b||!g)return;
-  const sys=g.dataset.g==='sys'?b.dataset.v:S.sys, co=g.dataset.g==='corner'?b.dataset.v==='1':S.corner;
-  if(sys===S.sys&&co===S.corner)return; autoFill(sys,co); renderAll();
+  const sys=g.dataset.g==='sys'?b.dataset.v:S.sys, co=g.dataset.g==='corner'?b.dataset.v:(sys==='vint'?'vcorner':'butt');
+  if(sys===S.sys&&co===CM())return; autoFill(sys,co); renderAll();
 });
-document.getElementById('cmpTbl').addEventListener('click',e=>{const b=e.target.closest('[data-cmp]');if(!b)return;const [sy,co]=b.dataset.cmp.split('|');autoFill(sy,co==='1');renderAll();});
+document.getElementById('cmpTbl').addEventListener('click',e=>{const b=e.target.closest('[data-cmp]');if(!b)return;const [sy,co]=b.dataset.cmp.split('|');autoFill(sy,co);renderAll();});
 // 저장 · 불러오기 (파일)
+
+/* ===== 저장 (자동 · GitHub 함께) ===== */
+const GH={owner:'Ydev-ai',repo:'house',path:'layout.json',branch:'main'};
+const CAN_STORE=location.protocol==='https:';
+const LSK='house_layout_v1', LSTOK='house_gh_token', LSWHO='house_gh_who';
+let READY=false, saveT=0, lastSer='';
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const snapData=()=>({S,H:{items:H.items,dev:H.dev,acMode:H.acMode,rbMode:H.rbMode}});
+function applyData(d){ if(!d)return; if(d.S)S=d.S; if(d.H)Object.assign(H,d.H); H.sel=null;H.dsel=null; if(S.d){ if(!S.d.vCor)S.d.vCor=400; if(S.d.vD===400||S.d.vD===580)S.d.vD=589; } }
+function readLocal(){ try{return JSON.parse(ls.get(LSK)||'null')}catch(e){return null} }
+function loadLocal(){ if(!CAN_STORE)return; const L=readLocal(); if(L&&L.data){ applyData(L.data); lastSer=JSON.stringify(L.data); } }
+function scheduleSave(){
+  if(!READY||!CAN_STORE)return;
+  clearTimeout(saveT); saveT=setTimeout(()=>{
+    const d=snapData(), ser=JSON.stringify(d); if(ser===lastSer)return; lastSer=ser;
+    const L=readLocal()||{}; ls.set(LSK,JSON.stringify({data:d,ts:Date.now(),syncedTs:L.syncedTs||0,remote:L.remote||null})); syncStat();
+  },700);
+}
+const tfmt=t=>{if(!t)return'-';const d=new Date(t);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+function syncStat(){
+  const el=document.getElementById('syncStat'); if(!el)return;
+  if(!CAN_STORE){ el.innerHTML='<span><i class="dot" style="background:var(--muted)"></i>링크(ydev-ai.github.io/house)로 열면 자동 저장과 함께 저장이 켜져요.</span>'; return; }
+  const L=readLocal()||{}, dirty=(L.ts||0)>(L.syncedTs||0), r=L.remote;
+  el.innerHTML=`<span><i class="dot" style="background:var(--ok)"></i>이 휴대폰에 자동 저장됨 ${L.ts?tfmt(L.ts):''}</span>`+
+    `<span><i class="dot" style="background:${dirty?'var(--pw)':'var(--ok)'}"></i>${r?`GitHub 마지막 저장: ${r.by||'?'} · ${tfmt(r.ts)}`:'GitHub에 아직 저장 안 함'}${dirty&&r?' · 아직 안 올린 변경 있음':''}</span>`;
+}
+const b64e=s=>btoa(unescape(encodeURIComponent(s)));
+const b64d=s=>decodeURIComponent(escape(atob(s.replace(/\s/g,''))));
+async function ghGet(){
+  const tok=ls.get(LSTOK), h={'Accept':'application/vnd.github+json'}; if(tok)h.Authorization='Bearer '+tok;
+  const r=await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}?ref=${GH.branch}&t=${Date.now()}`,{headers:h,cache:'no-store'});
+  if(r.status===404) return {sha:null,data:null};
+  if(!r.ok) throw new Error('불러오기 실패 ('+r.status+')');
+  const j=await r.json(); return {sha:j.sha,data:JSON.parse(b64d(j.content))};
+}
+async function ghPut(payload,sha){
+  const tok=ls.get(LSTOK); if(!tok) throw new Error('NO_TOKEN');
+  const body={message:`배치 저장 · ${payload.by} · ${tfmt(payload.ts)}`,content:b64e(JSON.stringify(payload)),branch:GH.branch}; if(sha)body.sha=sha;
+  const r=await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`,{method:'PUT',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(r.status===401||r.status===403) throw new Error('키 권한이 없어요 (Contents: Read and write 확인)');
+  if(r.status===409||r.status===422) throw new Error('CONFLICT');
+  if(!r.ok) throw new Error('저장 실패 ('+r.status+')');
+}
+function markSynced(remote){ const L=readLocal()||{}; const ts=L.ts||Date.now(); ls.set(LSK,JSON.stringify({data:snapData(),ts,syncedTs:ts,remote})); lastSer=JSON.stringify(snapData()); syncStat(); }
+function askBar(html){ const a=document.getElementById('syncAsk'); a.innerHTML=html; a.hidden=!html; }
+async function ghSave(force){
+  if(!CAN_STORE){ alert('링크(ydev-ai.github.io/house)에서 열었을 때만 함께 저장할 수 있어요.'); return; }
+  if(!ls.get(LSTOK)){ openDlg('먼저 GitHub 키를 넣어 주세요.'); return; }
+  const btn=document.getElementById('ghSave'); btn.disabled=true; btn.textContent='저장 중…';
+  try{
+    clearTimeout(saveT); const d=snapData(); lastSer=JSON.stringify(d);
+    const cur=await ghGet(), L=readLocal()||{};
+    if(!force&&cur.data&&cur.data.ts>(L.syncedTs||0)&&cur.data.by!==(ls.get(LSWHO)||'')){
+      askBar(`<b>${cur.data.by||'다른 사람'}</b>이 ${tfmt(cur.data.ts)}에 먼저 저장한 배치가 있어요. 내 배치로 덮어쓸까요?<div class="btnrow"><button class="btn" data-sa="load">그 배치 불러오기</button><button class="btn primary" data-sa="force">내 배치로 덮어쓰기</button><button class="btn ghost" data-sa="x">닫기</button></div>`);
+      return;
+    }
+    const payload={v:1,ts:Date.now(),by:ls.get(LSWHO)||'이름 없음',data:d};
+    await ghPut(payload,cur.sha);
+    ls.set(LSK,JSON.stringify({data:d,ts:payload.ts,syncedTs:payload.ts,remote:{ts:payload.ts,by:payload.by}}));
+    askBar(''); syncStat(); toast('GitHub에 저장했어요. 링크를 여는 사람 모두 이 배치를 봐요.');
+  }catch(e){ if(e.message==='CONFLICT'){ toast('그 사이 다른 저장이 있었어요. 다시 눌러 주세요.'); } else if(e.message==='NO_TOKEN'){ openDlg('GitHub 키를 넣어 주세요.'); } else toast(e.message); }
+  finally{ btn.disabled=false; btn.textContent='함께 저장'; }
+}
+async function ghPull(silentIfSame){
+  try{
+    const cur=await ghGet(); if(!cur.data){ if(!silentIfSame) toast('GitHub에 저장된 배치가 아직 없어요.'); return; }
+    applyData(cur.data.data); renderDims(); renderAll();
+    markSynced({ts:cur.data.ts,by:cur.data.by}); askBar('');
+    toast(`${cur.data.by||''} · ${tfmt(cur.data.ts)} 배치를 불러왔어요.`);
+  }catch(e){ toast(e.message); }
+}
+async function syncInit(){
+  syncStat(); if(!CAN_STORE)return;
+  try{
+    const cur=await ghGet(); if(!cur.data)return;
+    const L=readLocal()||{}; const remote={ts:cur.data.ts,by:cur.data.by};
+    if(cur.data.ts>(L.syncedTs||0)){
+      const dirty=(L.ts||0)>(L.syncedTs||0);
+      if(!dirty||!L.data){ applyData(cur.data.data); renderDims(); renderAll(); markSynced(remote); toast(`최신 배치(${cur.data.by||''} · ${tfmt(cur.data.ts)})를 불러왔어요.`); }
+      else { const L2=readLocal()||{}; L2.remote=remote; ls.set(LSK,JSON.stringify(L2)); syncStat();
+        askBar(`GitHub에 <b>${cur.data.by||'다른 사람'}</b>이 ${tfmt(cur.data.ts)}에 저장한 새 배치가 있어요. 이 휴대폰에는 아직 안 올린 변경이 있어요.<div class="btnrow"><button class="btn primary" data-sa="load">새 배치 불러오기</button><button class="btn" data-sa="force">내 배치로 덮어쓰기</button><button class="btn ghost" data-sa="x">나중에</button></div>`); }
+    } else { const L2=readLocal()||{}; L2.remote=remote; if(L2.data) ls.set(LSK,JSON.stringify(L2)); syncStat(); }
+  }catch(e){ /* 오프라인 등 */ }
+}
+function toast(m){ let t=document.getElementById('toast'); if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:50;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;max-width:90vw;box-shadow:3px 3px 0 rgba(0,0,0,.2)';document.body.appendChild(t);} t.textContent=m; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',3200); }
+function openDlg(msg){ const d=document.getElementById('syncDlg'); document.getElementById('ghWho').value=ls.get(LSWHO)||''; document.getElementById('ghTok').value=ls.get(LSTOK)?'••••••••(저장됨)':''; document.getElementById('ghMsg').textContent=msg||''; if(d.showModal)d.showModal(); else d.setAttribute('open',''); }
+document.getElementById('syncOpen').onclick=()=>openDlg();
+document.getElementById('ghSave').onclick=()=>ghSave(false);
+document.getElementById('syncAsk').addEventListener('click',e=>{const b=e.target.closest('[data-sa]');if(!b)return; if(b.dataset.sa==='load')ghPull(); else if(b.dataset.sa==='force')ghSave(true); else askBar('');});
+document.getElementById('ghPull').onclick=()=>{ if(confirm('GitHub의 최신 배치로 바꿀까요? 이 휴대폰의 안 올린 변경은 사라져요.')) ghPull(); };
+document.getElementById('ghKeyDel').onclick=()=>{ ls.del(LSTOK); document.getElementById('ghTok').value=''; document.getElementById('ghMsg').textContent='이 휴대폰에서 키를 지웠어요.'; };
+document.getElementById('ghKeySave').onclick=async()=>{
+  const m=document.getElementById('ghMsg'), who=document.getElementById('ghWho').value.trim(), tokIn=document.getElementById('ghTok').value.trim();
+  if(!CAN_STORE){ m.textContent='링크(ydev-ai.github.io/house)에서 열었을 때만 키를 저장할 수 있어요.'; return; }
+  if(who) ls.set(LSWHO,who);
+  if(tokIn&&!tokIn.startsWith('••')) ls.set(LSTOK,tokIn);
+  if(!ls.get(LSTOK)){ m.textContent='키를 붙여넣어 주세요.'; return; }
+  m.textContent='연결 확인 중…';
+  try{
+    const r=await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}`,{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+ls.get(LSTOK)}});
+    const j=await r.json();
+    m.textContent = r.ok ? (j.permissions&&j.permissions.push===false ? '연결은 됐는데 쓰기 권한이 없어요. Contents를 Read and write로 바꿔 주세요.' : `연결됐어요${who?' · '+who+'(으)로 저장해요':''}. 이제 "함께 저장"을 누르면 돼요.`) : '키가 맞지 않아요 ('+r.status+'). 다시 확인해 주세요.';
+  }catch(e){ m.textContent='연결하지 못했어요. 인터넷을 확인해 주세요.'; }
+};
 document.getElementById('saveBtn').onclick=()=>{
   const data={v:1,S,H:{items:H.items,dev:H.dev,acMode:H.acMode,rbMode:H.rbMode}};
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'}), a=document.createElement('a');
@@ -1047,7 +1231,7 @@ document.getElementById('saveBtn').onclick=()=>{
 };
 document.getElementById('loadIn').addEventListener('change',e=>{
   const fl=e.target.files&&e.target.files[0]; if(!fl)return;
-  const rd=new FileReader(); rd.onload=()=>{ try{ const j=JSON.parse(rd.result); if(j.S){S=j.S;} if(j.H){Object.assign(H,j.H);} H.sel=null;H.dsel=null; renderDims(); renderAll(); alert('배치를 불러왔어요.'); }catch(err){ alert('파일을 읽지 못했어요.'); } };
+  const rd=new FileReader(); rd.onload=()=>{ try{ const j=JSON.parse(rd.result); applyData(j.data||j); renderDims(); renderAll(); alert('배치를 불러왔어요.'); }catch(err){ alert('파일을 읽지 못했어요.'); } };
   rd.readAsText(fl); e.target.value='';
 });
 document.getElementById('dims').addEventListener('input',e=>{
@@ -1511,7 +1695,7 @@ function renderHouse(light){
   s+=`</svg>`;
   document.getElementById('house').innerHTML=s;
   document.getElementById('hPlanTitle').textContent=rm?`${rm.n} · 약 ${(rm.w/1000).toFixed(2)} × ${(rm.h/1000).toFixed(2)}m`:'집 전체';
-  if(!light) renderHSide();
+  if(!light){ renderHSide(); scheduleSave(); }
 }
 
 function renderHSide(){
@@ -1730,7 +1914,7 @@ document.getElementById('tabSeg').onclick=e=>{const b=e.target.closest('button')
 function setTheme(t){document.documentElement.dataset.theme=t;document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.th===t));}
 document.getElementById('themeSeg').onclick=e=>{const b=e.target.closest('[data-th]');if(b)setTheme(b.dataset.th);};
 setTheme(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-renderDims(); renderAll(); setTab('house');
+loadLocal(); renderDims(); renderAll(); setTab('house'); READY=true; syncInit();
 </script>
 </body>
 </html>
