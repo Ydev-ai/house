@@ -62,7 +62,7 @@ svg text{font-family:inherit;fill:var(--ink)}
 .mk{cursor:pointer}
 .mk circle.dot{stroke:var(--ink);stroke-width:2}
 .mk.sel circle.dot{stroke-width:3.5}
-.mk text{font-size:12px;font-weight:700;paint-order:stroke;stroke:var(--mapbg);stroke-width:3.5px;stroke-linejoin:round}
+.mk text{font-size:calc(12px * var(--mk,1));font-weight:700;paint-order:stroke;stroke:var(--mapbg);stroke-width:3.5px;stroke-linejoin:round}
 .mk.dim{opacity:.35}
 .mk:hover text,.mk.sel text{font-weight:900}
 .kstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -132,6 +132,35 @@ svg text{font-family:inherit;fill:var(--ink)}
   .kstat b{font-size:19px}
 }
 @media (pointer:coarse){.seg button{min-height:40px}.rk{padding:10px 4px}}
+
+.main>*,.side>*{min-width:0}
+.msel{display:none}
+.cmp td.nm .mv{display:none}
+@media (max-width:700px){
+  .main{grid-template-columns:minmax(0,1fr)}
+  #map svg{min-width:560px}
+  .cmp{min-width:0}
+  .cmp thead{display:none}
+  .cmp,.cmp tbody,.cmp td{display:block;width:100%}
+  .cmp tbody tr{border:2px solid var(--ink);border-radius:12px;margin:0 0 10px;padding:8px 10px;display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;background:var(--card)}
+  .cmp td{border:0;padding:3px 0}
+  .cmp td.nm{grid-column:1/-1;font-size:17px;display:flex;justify-content:space-between;align-items:center}
+  .cmp td.nm .mv{display:inline}
+  .cmp td[data-l]::before{content:attr(data-l);display:block;font-size:11.5px;color:var(--muted);font-weight:700}
+  .cmp td.rt{grid-column:1/-1}
+  .cmp td.vd{display:none}
+  .msel{display:block;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;background:var(--card);border:2.5px solid var(--ink);border-radius:18px;box-shadow:5px 5px 0 var(--ink);padding:12px 14px}
+  .msel[hidden]{display:none}
+  .msel .row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .msel .nm{font-size:18px;font-weight:900;line-height:1.25}
+  .msel .x{border:0;background:none;font-size:20px;color:var(--muted);padding:2px 6px}
+  .msel .tt{display:flex;gap:14px;margin:6px 0 4px;font-weight:800;font-variant-numeric:tabular-nums}
+  .msel button.more{margin-top:8px;width:100%;border:2px solid var(--ink);border-radius:12px;background:var(--hl);font:inherit;font-weight:800;padding:8px;color:#1f1d1a}
+  .wrap{padding-bottom:170px}
+}
+@media (pointer:coarse){input,select{font-size:16px}}
+.msort{display:none;margin:0 0 12px}
+@media (max-width:700px){.msort{display:inline-flex}}
 </style>
 </head>
 <body>
@@ -188,6 +217,7 @@ svg text{font-family:inherit;fill:var(--ink)}
   <div class="lower card">
     <h2 class="title">전체 표</h2>
     <p class="hint" style="margin-bottom:8px">머리글을 누르면 정렬돼요. 대중교통은 <b>환승 없는 경로 중 가장 빠른 것</b>이고, 시간에 집↔정류장·정류장↔학교 도보가 모두 포함돼 있어요.</p>
+    <div class="seg small msort" id="mSort"><button data-k="t">대중교통 빠른 순</button><button data-k="car">자동차 빠른 순</button><button data-k="ok">조건 충족 먼저</button><button data-k="n">이름순</button></div>
     <div class="tblwrap">
       <table class="cmp" id="tbl">
         <thead><tr>
@@ -203,6 +233,7 @@ svg text{font-family:inherit;fill:var(--ink)}
     </div>
   </div>
 
+  <div id="mSel" class="msel" hidden></div>
   <div class="note">
     <ul>
       <li>자동차 시간은 조회 시점(평일 낮)의 실시간 교통 기준이에요. 등교 시간대(8시~8시 40분)엔 몇 분 더 걸릴 수 있으니 13~15분인 곳은 여유를 두고 보세요.</li>
@@ -272,7 +303,7 @@ function routeHTML(line,from,to,walk){
 }
 
 /* ---------- map ---------- */
-const W=720,PAD=46;
+const W=720,PAD=46, MK=window.innerWidth<=700?1.25:1;
 const kx=Math.cos(HOME.lat*Math.PI/180)*111320, ky=110940;
 const pts=S.map(s=>({x:(s.lon-HOME.lon)*kx,y:(s.lat-HOME.lat)*ky}));
 const xs=pts.map(p=>p.x).concat(0), ys=pts.map(p=>p.y).concat(0);
@@ -294,7 +325,7 @@ function placeLabels(){
   const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
   const order=S.map((s,i)=>i).sort((a,b)=>S[a].px-S[b].px);
   order.forEach(i=>{
-    const s=S[i],w=s.n.length*12.5+4,h=15;
+    const s=S[i],w=s.n.length*12.5*MK+4,h=15*MK;
     const cands=[[10,-h/2],[-10-w,-h/2],[-w/2,-10-h],[-w/2,10],[8,-h-4],[8,4],[-8-w,-h-4],[-8-w,4],[14,-h/2-12],[14,-h/2+12],[-14-w,-h/2-12],[-14-w,-h/2+12]];
     let best=cands[0],bx;
     for(const c of cands){const b={x:s.px+c[0],y:s.py+c[1],w,h};if(b.x<2||b.x+w>W-2||b.y<2||b.y+h>H-2)continue;if(!boxes.some(o=>hit(o,b))){best=c;bx=b;break;}}
@@ -315,13 +346,13 @@ function drawMap(){
   const mks=S.map(s=>{
     const k=status(s), dim=st.show==='pass'&&k!=='ok';
     return `<g class="mk${st.sel===s.n?' sel':''}${dim?' dim':''}" data-n="${esc(s.n)}" tabindex="0" role="button" aria-label="${esc(s.n)}초등학교 자동차 ${s.car}분 대중교통 ${s.t}분">
-      <circle cx="${s.px}" cy="${s.py}" r="15" fill="transparent"/>
-      <circle class="dot" cx="${s.px}" cy="${s.py}" r="${st.sel===s.n?9:7}" fill="${colorOf(k)}"/>
+      <circle cx="${s.px}" cy="${s.py}" r="${18*MK}" fill="transparent"/>
+      <circle class="dot" cx="${s.px}" cy="${s.py}" r="${(st.sel===s.n?9:7)*MK}" fill="${colorOf(k)}"/>
       <text x="${s.lx}" y="${s.ly}">${esc(s.n)}</text></g>`;
   }).join('');
   const home=`<g><rect x="${hx-13}" y="${hy-13}" width="26" height="26" rx="7" fill="var(--hl)" stroke="var(--ink)" stroke-width="2.5"/><text x="${hx}" y="${hy+5}" text-anchor="middle" style="font-size:14px;font-weight:900">집</text><text x="${hx}" y="${hy-21}" text-anchor="middle" style="font-size:11.5px;font-weight:800;paint-order:stroke;stroke:var(--mapbg);stroke-width:3.5px">우리집</text></g>`;
   const north=`<g transform="translate(${W-34},30)"><path d="M0 -14 L7 6 L0 2 L-7 6 Z" fill="var(--ink)"/><text x="0" y="20" text-anchor="middle" style="font-size:11px;font-weight:800">N</text></g>`;
-  $('#map').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="출발지 기준 덕양구 초등학교 위치"><rect x="0" y="0" width="${W}" height="${H}" rx="10" fill="var(--mapbg)"/>${rings}${line3}${sel}${mks}${home}${north}</svg>`;
+  $('#map').style.setProperty('--mk',MK);$('#map').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="출발지 기준 덕양구 초등학교 위치"><rect x="0" y="0" width="${W}" height="${H}" rx="10" fill="var(--mapbg)"/>${rings}${line3}${sel}${mks}${home}${north}</svg>`;
   document.querySelectorAll('.mk').forEach(g=>{
     g.addEventListener('click',()=>select(g.dataset.n));
     g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(g.dataset.n)}});
@@ -371,25 +402,38 @@ function drawTable(){
     const k=status(s),[tc,tl]=trTier(s.t);
     const verdict=k==='ok'?'<span class="tag g">충족</span>':k==='tr'?'<span class="tag y">대중교통 김</span>':'<span class="tag r">차 초과</span>';
     return `<tr class="${st.sel===s.n?'cur':''}${k!=='ok'?' out':''}" data-n="${esc(s.n)}">
-      <td class="nm">${esc(s.n)}</td>
-      <td class="num">${s.car}분<small>${s.km}km</small><span class="bar2" style="width:${Math.round(s.car/maxCar*100)}%;background:${s.car>st.carMax?'var(--warn)':'var(--ok)'}"></span></td>
-      <td class="num">${fmt(s.t)} <span class="tag ${tc}">${tl}</span><span class="bar2" style="width:${Math.round(s.t/maxT*100)}%;background:var(--accent)"></span></td>
-      <td class="num" style="min-width:0">${s.walk}분</td>
-      <td>${routeHTML(s.line,s.from,s.to,s.walk).replace(/<span class="walk">.*?<\/span>/,'')}</td>
-      <td>${verdict}</td></tr>`;
+      <td class="nm">${esc(s.n)}<span class="mv">${verdict}</span></td>
+      <td class="num" data-l="🚗 자동차">${s.car}분<small>${s.km}km</small><span class="bar2" style="width:${Math.round(s.car/maxCar*100)}%;background:${s.car>st.carMax?'var(--warn)':'var(--ok)'}"></span></td>
+      <td class="num" data-l="🚌 대중교통">${fmt(s.t)} <span class="tag ${tc}">${tl}</span><span class="bar2" style="width:${Math.round(s.t/maxT*100)}%;background:var(--accent)"></span></td>
+      <td class="num" data-l="그중 도보" style="min-width:0">${s.walk}분</td>
+      <td class="rt" data-l="환승 없는 노선">${routeHTML(s.line,s.from,s.to,s.walk).replace(/<span class="walk">.*?<\/span>/,'')}</td>
+      <td class="vd">${verdict}</td></tr>`;
   }).join('');
-  document.querySelectorAll('#tbl tbody tr').forEach(tr=>tr.addEventListener('click',()=>{select(tr.dataset.n);document.querySelector('#map').scrollIntoView({behavior:'smooth',block:'start'})}));
+  document.querySelectorAll('#tbl tbody tr').forEach(tr=>tr.addEventListener('click',()=>{select(tr.dataset.n);if(window.innerWidth>700)document.querySelector('#map').scrollIntoView({behavior:'smooth',block:'start'})}));
   document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.classList.toggle('on',th.dataset.k===st.sort));
+  document.querySelectorAll('#mSort button').forEach(b=>b.classList.toggle('on',b.dataset.k===st.sort));
 }
 
 function select(n){st.sel=st.sel===n?null:n;render();}
-function render(){drawMap();drawStats();drawSel();drawTable();}
+function drawMSel(){
+  const m=document.getElementById('mSel'), s=S.find(x=>x.n===st.sel);
+  if(!s){m.hidden=true;return;}
+  const k=status(s);
+  m.innerHTML=`<div class="row"><div><div class="nm">${esc(s.n)}초등학교</div><div style="font-size:12.5px;color:${k==='ok'?'var(--ok)':k==='tr'?'var(--pw)':'var(--warn)'};font-weight:700">${k==='ok'?'조건 충족':k==='tr'?'대중교통이 기준 초과':'차로 기준 초과'}</div></div><button class="x" data-ms="x" aria-label="닫기">✕</button></div>
+    <div class="tt"><span>🚗 ${s.car}분</span><span>🚌 ${fmt(s.t)}</span><span style="color:var(--muted);font-weight:600">도보 ${s.walk}분</span></div>
+    ${routeHTML(s.line,s.from,s.to,s.walk)}
+    <button class="more" data-ms="more">경로 자세히 보기</button>`;
+  m.hidden=false;
+}
+document.getElementById('mSel').addEventListener('click',e=>{const b=e.target.closest('[data-ms]');if(!b)return;if(b.dataset.ms==='x'){st.sel=null;render();}else document.getElementById('selCard').scrollIntoView({behavior:'smooth',block:'center'});});
+function render(){drawMap();drawStats();drawSel();drawTable();drawMSel();}
 
 /* ---------- controls ---------- */
 $('#carMax').addEventListener('input',e=>{st.carMax=+e.target.value;$('#carMaxV').textContent=st.carMax+'분 이내';render();});
 $('#trMax').addEventListener('input',e=>{st.trMax=+e.target.value;$('#trMaxV').textContent=trOff()?'제한 없음':st.trMax+'분 이내';render();});
 document.querySelectorAll('#showSeg button').forEach(b=>b.addEventListener('click',()=>{st.show=b.dataset.s;segOn('#showSeg',b);render();}));
 document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.addEventListener('click',()=>{st.sort=th.dataset.k;drawTable();}));
+document.querySelectorAll('#mSort button').forEach(b=>b.addEventListener('click',()=>{st.sort=b.dataset.k;drawTable();}));
 function segOn(sel,btn){document.querySelectorAll(sel+' button').forEach(x=>x.classList.toggle('on',x===btn));}
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);segOn('#themeSeg',document.querySelector(`#themeSeg [data-th="${t}"]`));}
 document.querySelectorAll('#themeSeg button').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.th)));
