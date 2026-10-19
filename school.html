@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>통학 거리</title>
+<style>
+:root,:root[data-theme="light"]{
+  --bg:#fbf7ef; --card:#ffffff; --ink:#24221f; --muted:#77736c; --line:#e6e3dd;
+  --field:#f5efe3; --accent:#e8573f; --accent-ink:#fff;
+  --pw:#e0a800; --warn:#e2483d; --ok:#2f8a5a; --hl:#ffe066; --pill:#ffffff;
+  --sub3:#ef7c1c; --bus:#3d7fc4; --ring:#d9d3c7; --mapbg:#fdfcfa;
+}
+:root[data-theme="dark"]{
+  --bg:#161615; --card:#1f1f1d; --ink:#ecebe7; --muted:#9b978f; --line:#34332f;
+  --field:#2a2927; --accent:#8cc2ac; --accent-ink:#13201b;
+  --pw:#ffcf40; --warn:#ff7a6e; --ok:#7cd3a0; --hl:#8a6d10; --pill:#fffaf0;
+  --sub3:#ff9a45; --bus:#7fb0e6; --ring:#3d3b37; --mapbg:#252523;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]):not([data-theme="eye"]){
+    --bg:#161615; --card:#1f1f1d; --ink:#ecebe7; --muted:#9b978f; --line:#34332f;
+    --field:#2a2927; --accent:#8cc2ac; --accent-ink:#13201b;
+    --pw:#ffcf40; --warn:#ff7a6e; --ok:#7cd3a0; --hl:#8a6d10; --pill:#fffaf0;
+    --sub3:#ff9a45; --bus:#7fb0e6; --ring:#3d3b37; --mapbg:#252523;
+  }
+}
+:root[data-theme="eye"]{
+  --bg:#f1e8d6; --card:#f8f1e4; --ink:#352c20; --muted:#6f6150; --line:#e0d4bd;
+  --field:#efe5d2; --accent:#7a5426; --accent-ink:#fff;
+  --pw:#c99400; --warn:#b8433a; --ok:#4f7a4f; --hl:#f2cf6b; --pill:#fffaf0;
+  --sub3:#c9701e; --bus:#4f7598; --ring:#e0d4bd; --mapbg:#f7efe0;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(color-mix(in srgb,var(--ink) 9%,transparent) 1.2px,transparent 1.3px);background-size:22px 22px}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:18px 0 14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.brand{font-size:24px;font-weight:900;letter-spacing:-.03em;margin-right:auto;line-height:1.3}
+.brand span.hl{background:linear-gradient(transparent 58%,var(--hl) 58%);padding:0 2px}
+.brand small{display:block;font-size:12.5px;font-weight:400;color:var(--muted);letter-spacing:0;margin-top:2px}
+.seg{display:inline-flex;flex-wrap:wrap;border:2px solid var(--ink);border-radius:12px;padding:2px;background:var(--card);box-shadow:3px 3px 0 var(--ink)}
+.seg button{border:0;background:none;color:var(--ink);opacity:.75;font-weight:600;padding:6px 13px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer}
+.seg button:hover{opacity:1}
+.seg button.on{background:var(--hl);color:#1f1d1a;opacity:1;font-weight:800;box-shadow:inset 0 0 0 2px var(--ink)}
+.seg.small button{font-size:13px;padding:4px 10px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;margin-bottom:14px}
+.rng{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;background:var(--card);border:2px solid var(--ink);border-radius:12px;padding:6px 12px;box-shadow:3px 3px 0 var(--ink)}
+.rng input{width:130px;accent-color:var(--accent)}
+.rng b{min-width:58px;display:inline-block;font-variant-numeric:tabular-nums}
+.main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(300px,1fr);gap:28px;align-items:start}
+.canvas,.card{background:var(--card);border:2.5px solid var(--ink);border-radius:18px;box-shadow:6px 6px 0 var(--ink);padding:16px}
+.canvas .cap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;font-size:13px;color:var(--muted);margin-top:10px}
+h2.title{font-size:20px;font-weight:900;margin:0 0 8px;letter-spacing:-.01em}
+.blk>h2,.card>h2:not(.title){display:inline-block;font-size:14px;font-weight:800;color:var(--ink);background:var(--hl);padding:2px 10px;border:2px solid var(--ink);border-radius:999px;margin:0 0 10px}
+.side{display:flex;flex-direction:column;gap:22px}
+.planbox{overflow:auto;-webkit-overflow-scrolling:touch;border-radius:10px}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:inherit;fill:var(--ink)}
+.mk{cursor:pointer}
+.mk circle.dot{stroke:var(--ink);stroke-width:2}
+.mk.sel circle.dot{stroke-width:3.5}
+.mk text{font-size:12px;font-weight:700;paint-order:stroke;stroke:var(--mapbg);stroke-width:3.5px;stroke-linejoin:round}
+.mk.dim{opacity:.35}
+.mk:hover text,.mk.sel text{font-weight:900}
+.kstat{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kstat div{border:2px solid var(--ink);border-radius:12px;padding:8px 10px;background:var(--card)}
+.kstat b{display:block;font-size:22px;font-weight:900;line-height:1.2}
+.kstat span{font-size:12px;color:var(--muted);line-height:1.3;display:block}
+.kstat .g b{color:var(--ok)} .kstat .r b{color:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.lg{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);display:inline-block}
+.selname{font-size:22px;font-weight:900;letter-spacing:-.01em;line-height:1.25}
+.selstate{font-size:14.5px;margin:4px 0 0}
+.selstate.good{color:var(--ok)} .selstate.bad{color:var(--warn)} .selstate.mid{color:var(--pw)}
+.selstate.good::before,.selstate.bad::before,.selstate.mid::before{content:'● '}
+.addr{font-size:12.5px;color:var(--muted);margin:2px 0 8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.two>div{border:2px solid var(--ink);border-radius:12px;padding:8px 10px}
+.two .k{font-size:12px;color:var(--muted);font-weight:700}
+.two .v{font-size:22px;font-weight:900;line-height:1.2}
+.two .v small{font-size:12.5px;font-weight:600;color:var(--muted);margin-left:3px}
+.route{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:13.5px}
+.ln{font-size:12px;font-weight:800;border:1.5px solid var(--ink);border-radius:999px;padding:0 8px;color:#fff;white-space:nowrap}
+.ln.sub{background:var(--sub3)} .ln.bus{background:var(--bus)}
+.walk{font-size:12px;color:var(--muted);white-space:nowrap}
+.arrow{color:var(--muted)}
+.alts{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.alts li{border-top:2px dashed var(--line);padding-top:6px}
+.alts .tm{font-weight:800;font-variant-numeric:tabular-nums;margin-right:4px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.rank{display:flex;flex-direction:column;gap:2px}
+.rk{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;font-size:14px;padding:6px 4px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:6px}
+.rk:hover{background:var(--field)}
+.rk.sel{background:color-mix(in srgb,var(--hl) 45%,transparent)}
+.rk .no{font-weight:900;color:var(--muted);font-size:12.5px}
+.rk .tm{font-weight:800;font-variant-numeric:tabular-nums;font-size:13px}
+.rk small{color:var(--muted);font-size:12px;margin-left:4px}
+.tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cmp{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;min-width:760px}
+.cmp th,.cmp td{padding:9px 10px;border-bottom:2px dashed var(--line);text-align:left;vertical-align:middle}
+.cmp th{font-size:12.5px;color:var(--muted);font-weight:700;cursor:pointer;user-select:none;white-space:nowrap}
+.cmp th.on{color:var(--ink)}
+.cmp th.on::after{content:' ▲';font-size:10px}
+.cmp tbody tr{cursor:pointer}
+.cmp tbody tr:hover td{background:var(--field)}
+.cmp tr.cur td{background:color-mix(in srgb,var(--hl) 40%,transparent)}
+.cmp tr.out td{opacity:.55}
+.cmp td.num{font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap;min-width:110px}
+.cmp td.num small{font-weight:500;color:var(--muted);margin-left:4px}
+.cmp .bar2{display:block;height:8px;border-radius:99px;margin-top:4px;border:1.5px solid var(--ink)}
+.cmp td.nm{font-weight:800;white-space:nowrap}
+.tag{font-size:11.5px;font-weight:800;border:2px solid currentColor;border-radius:999px;padding:0 7px;white-space:nowrap}
+.tag.g{color:var(--ok)} .tag.y{color:var(--pw)} .tag.r{color:var(--warn)}
+.lower{margin-top:24px}
+.note{font-size:12.5px;color:var(--muted);margin-top:28px;border-top:1px solid var(--line);padding-top:12px}
+.note li{margin-bottom:3px}
+@media (max-width:1024px){.main{grid-template-columns:minmax(0,1fr) 300px;gap:20px}}
+@media (max-width:900px){.main{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:20px}}
+@media (max-width:700px){
+  .wrap{padding:0 16px 60px}
+  .brand{font-size:21px;width:100%}
+  .side{grid-template-columns:1fr}
+  .canvas,.card{box-shadow:4px 4px 0 var(--ink);padding:12px}
+  #map svg{min-width:600px}
+  .bar{flex-direction:column;align-items:stretch}
+  .rng{justify-content:space-between}
+  .rng input{flex:1;width:auto}
+  .kstat b{font-size:19px}
+}
+@media (pointer:coarse){.seg button{min-height:40px}.rk{padding:10px 4px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">우리집에서 <span class="hl">초등학교까지</span><small>출발지 우리집 · 덕양구 초등학교 32곳 · 카카오맵 길찾기 10/19(월) 오후 1~2시 조회 · <a href="./" style="color:inherit;font-weight:700">← 가구 배치 보기</a></small></div>
+    <div class="seg small" id="themeSeg">
+      <button data-th="light">밝게</button>
+      <button data-th="dark">어둡게</button>
+      <button data-th="eye">눈 편하게</button>
+    </div>
+  </header>
+
+  <div class="bar">
+    <label class="rng">🚗 자동차 <input type="range" id="carMax" min="5" max="25" value="15"> <b id="carMaxV">15분 이내</b></label>
+    <label class="rng">🚌 대중교통 <input type="range" id="trMax" min="15" max="75" step="5" value="75"> <b id="trMaxV">제한 없음</b></label>
+    <div class="seg small" id="showSeg">
+      <button data-s="all">전체 보기</button>
+      <button data-s="pass">조건 맞는 곳만</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="canvas">
+      <h2 class="title">지도로 보기</h2>
+      <div class="planbox"><div id="map"></div></div>
+      <div class="cap">
+        <div class="legend">
+          <span><i class="lg" style="background:var(--ok)"></i>조건 충족</span>
+          <span><i class="lg" style="background:var(--pw)"></i>차는 OK, 대중교통이 기준 초과</span>
+          <span><i class="lg" style="background:var(--warn)"></i>차로 기준 초과</span>
+          <span><i style="display:inline-block;width:18px;height:5px;border-radius:3px;background:var(--sub3);opacity:.6"></i>3호선</span>
+          <span>점선 원 = 직선거리 2km 간격</span>
+        </div>
+        <span>점이나 표의 행을 누르면 경로가 나와요.</span>
+      </div>
+    </div>
+    <div class="side">
+      <div class="blk">
+        <h2>요약</h2>
+        <div class="kstat" id="kstat"></div>
+      </div>
+      <div class="blk">
+        <h2>선택한 학교</h2>
+        <div class="card" id="selCard" style="box-shadow:4px 4px 0 var(--ink)"></div>
+      </div>
+      <div class="blk">
+        <h2>조건 충족 · 대중교통 빠른 순</h2>
+        <div class="rank" id="rank"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lower card">
+    <h2 class="title">전체 표</h2>
+    <p class="hint" style="margin-bottom:8px">머리글을 누르면 정렬돼요. 대중교통은 <b>환승 없는 경로 중 가장 빠른 것</b>이고, 시간에 집↔정류장·정류장↔학교 도보가 모두 포함돼 있어요.</p>
+    <div class="tblwrap">
+      <table class="cmp" id="tbl">
+        <thead><tr>
+          <th data-k="n">학교</th>
+          <th data-k="car">🚗 자동차</th>
+          <th data-k="t">🚌 대중교통 (도보 포함)</th>
+          <th data-k="walk">그중 도보</th>
+          <th>환승 없는 노선</th>
+          <th data-k="ok">판정</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">
+    <ul>
+      <li>자동차 시간은 조회 시점(평일 낮)의 실시간 교통 기준이에요. 등교 시간대(8시~8시 40분)엔 몇 분 더 걸릴 수 있으니 13~15분인 곳은 여유를 두고 보세요.</li>
+      <li>대중교통 시간은 배차 대기를 평균으로 잡은 카카오맵 예상치예요. 버스 시간표에 따라 실제와 5~10분 차이가 날 수 있어요.</li>
+      <li>심야버스(N999)로만 나오는 경로는 등교에 못 쓰니 뺐어요. 3800은 광역버스라 요금이 3,200원이에요.</li>
+      <li>집 바로 옆 초등학교(도보 3분 안팎)는 표에서 뺐어요.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+const HOME={lon:126.8679,lat:37.6522};
+// [이름, lon, lat, 주소, 차(분), 차(km), [대중교통 총분, 도보분, 노선, 승차, 하차], [대안...]]
+const RAW=[
+["가람",126.84225983,37.62373725,"행신로311번길 78",13,6.3,[45,18,"024A","원흥역3번출구","은강교회"],[[61,37,"95","가시골","고양경찰서앞"],[62,42,"3800","원흥역3번출구","별빛마을8단지"],[65,34,"024B","원흥역3번출구","소만마을6단지"]]],
+["고양동산",126.88643066,37.6462622,"동세로 32",7,2.9,[25,18,"703","가시골","동산고등학교"],[[25,19,"047","예승프라자","삼송마을18·19단지"],[27,22,"075A","원흥역4번출구","삼송마을1602동앞"],[29,22,"567","가시골","삼송마을18·19단지"]]],
+["고양오금",126.89527995,37.66180602,"오금1로 10",11,4.1,[30,13,"047","예승프라자","신원마을3단지"],[[34,19,"313·313-1","원흥역5번출구","신원마을2·4단지"],[35,19,"999","삼송마을11단지","신원마을2·4단지"],[38,36,"3호선","원흥역","삼송역"]]],
+["고양용현",126.83821408,37.61514717,"화신로 21",15,6.8,[47,16,"024B","원흥역3번출구","소만마을6단지"],[[51,16,"024A","원흥역3번출구","소만마을5·6단지"]]],
+["고양화수",126.83273234,37.64537659,"화수로 25",10,4.4,[29,13,"95","가시골","화정1동행정복지센터"],[[31,16,"3800","원흥역3번출구","화정1동행정복지센터"],[38,29,"999","삼송마을11단지","어울림마을입구"],[41,35,"3호선","원흥역","화정역"]]],
+["고양화정",126.82619142,37.63400032,"화신로 333",14,6.0,[30,23,"3호선","원흥역","화정역"],[[38,16,"95","가시골","별빛마을8단지"],[39,19,"3800","원흥역3번출구","별빛마을8단지"]]],
+["능곡",126.81594145,37.62452443,"토당로67번길 66",19,9.0,[41,32,"3호선","원흥역","대곡역"],[[55,31,"95","가시골","고양경찰서앞"],[57,33,"3800","원흥역3번출구","대곡역"]]],
+["덕은한강",126.8636045,37.58159392,"대덕산로 55",20,13.4,[72,36,"7602","삼송마을18단지후문","위프라임트윈타워"],[]],
+["도래울",126.87051088,37.63166517,"도래울3로 5",10,3.3,[24,13,"024A·024B","원흥역3번출구","도래울초등학교"],[[27,13,"046·075B","원흥역3번출구","도래울초등학교"],[28,16,"730·046·075B","원흥역3번출구","도래울마을2·3단지"]]],
+["무원",126.83170243,37.61771128,"무원로 47",14,6.9,[55,23,"024B","원흥역3번출구","행신역"],[[60,23,"024A","원흥역3번출구","행신역"],[60,36,"95","가시골","고양경찰서앞"]]],
+["백양",126.83612424,37.63223058,"화신로 238",11,5.4,[27,21,"3호선","원흥역","화정역"],[[41,19,"95","가시골","별빛마을8단지"]]],
+["삼송",126.88237529,37.65414723,"세솔로 150",7,2.5,[17,9,"075A","원흥역4번출구","16단지·삼송초교"],[[19,13,"999","삼송마을11단지","삼송마을14단지"],[20,13,"046","원흥역2번출구","16단지·삼송초교"]]],
+["서정",126.8485952,37.61433924,"소원로 251",11,5.7,[41,15,"024B","원흥역3번출구","서정마을3단지"],[[60,25,"024A","원흥역3번출구","소만마을5·6단지"]]],
+["성라",126.83393953,37.65280959,"성사동",11,3.9,[24,15,"95","가시골","어울림마을7단지"],[[26,17,"999","삼송마을11단지","어울림마을입구"],[27,20,"95·999·703","가시골","어울림마을입구"]]],
+["성사",126.84387884,37.65771009,"호국로834번길 89",9,5.4,[21,16,"999","삼송마을11단지","원당역"],[[22,18,"95·999·567·703","가시골","원당역"],[23,16,"567","가시골","성사1동행정복지센터"]]],
+["성신",126.84021018,37.62660683,"성신로 104",13,6.1,[44,37,"3호선","원흥역","화정역"],[[50,24,"024A","원흥역3번출구","영흥빌라"]]],
+["소만",126.83953175,37.61758884,"화신로 48",12,6.1,[48,15,"024A","원흥역3번출구","소만마을8·9단지"],[[51,20,"024B","원흥역3번출구","소만마을6단지"]]],
+["신능",126.83113958,37.62418316,"충장로123번길 37",14,6.4,[41,34,"3호선","원흥역","화정역"],[[45,20,"95","가시골","고양경찰서앞"]]],
+["신원",126.88580373,37.6679284,"신원3로 21",11,3.9,[25,10,"999","삼송마을11단지","신원중학교"],[[28,19,"999·075B","원흥역7번출구","신원마을4단지"],[31,14,"313·313-1","원흥역5번출구","세원마을입구"]]],
+["아람",126.85023406,37.61944452,"서정마을로 36",10,5.5,[49,22,"024B","원흥역3번출구","서정마을3단지"],[[50,22,"024A","원흥역3번출구","큰나무교회"]]],
+["용정",126.82967496,37.64053934,"은빛로17번길 53",12,5.1,[32,13,"95","가시골","화정동단독주택단지"],[[35,29,"3호선","원흥역","화정역"]]],
+["원당",126.83495184,37.66237583,"마상로107번길 13",13,4.7,[31,19,"999","삼송마을11단지","고양시청"],[[32,22,"999·703","가시골","고양시청"],[34,20,"567","가시골","고양시청·덕양구보건소"]]],
+["지도",126.83380834,37.62827743,"성신로 49",13,6.0,[34,28,"3호선","원흥역","화정역"],[[44,20,"95","가시골","고양경찰서앞"]]],
+["지축",126.91590898,37.65287578,"오부자로 50",13,5.1,[31,26,"3호선","원흥역","지축역"],[[50,34,"703","가시골","은평뉴타운10단지"]]],
+["창릉",126.89319943,37.64814166,"덕수천2로 118",9,3.5,[27,18,"703","가시골","창릉호반써밋"],[[28,18,"047","예승프라자","삼송마을20단지"],[29,12,"075A","원흥역4번출구","스타필드후문"]]],
+["토당",126.82625754,37.61727812,"행신로 90",16,10.5,[58,34,"95","가시골","고양경찰서앞"],[[64,32,"024B","원흥역3번출구","행신역"],[69,32,"024A","원흥역3번출구","행신역"]]],
+["행남",126.8426403,37.61520361,"소만로 22",12,6.0,[46,16,"024B","원흥역3번출구","서정마을7단지후문"],[[47,13,"024A","원흥역3번출구","소만마을5·6단지"]]],
+["행신",126.8364594,37.62197062,"중앙로 527",15,6.6,[55,25,"024A","원흥역3번출구","가라뫼사거리"],[[55,31,"95","가시골","고양경찰서앞"],[59,39,"3800","원흥역3번출구","별빛마을8단지"]]],
+["향동숲내",126.89105679,37.59527429,"향기로 53",20,8.9,[51,15,"730","원흥역3번출구","향동숲내초·DMC호반4단지"],[[60,13,"075A","원흥역4번출구","향동숲내초·DMC호반4단지"],[61,39,"7602","삼송마을18단지후문","향동꽃내음1길입구"]]],
+["향동",126.89562486,37.60403064,"향동1로 37",17,8.0,[42,12,"730","원흥역3번출구","향동초·향동중"],[[50,10,"075A","원흥역4번출구","향동초·향동중"],[55,34,"7602","삼송마을18단지후문","향동꽃내음1길입구"]]],
+["화중",126.83602357,37.64092314,"화중로152번길 43",11,4.6,[32,14,"95","가시골","화정동단독주택단지"],[[33,26,"3호선","원흥역","화정역"]]],
+["흥도",126.87192627,37.62812314,"도래울1로 83",12,3.9,[27,12,"024A·024B","원흥역3번출구","흥도초등학교"],[[29,12,"046·075B","원흥역3번출구","흥도초등학교"],[35,20,"730","원흥역3번출구","도래울마을5·6단지"]]]
+];
+const S=RAW.map(r=>({n:r[0],lon:r[1],lat:r[2],addr:r[3],car:r[4],km:r[5],t:r[6][0],walk:r[6][1],line:r[6][2],from:r[6][3],to:r[6][4],alts:r[7]}));
+
+const st={carMax:15,trMax:75,show:'all',sel:null,sort:'t'};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=m=>m>=60?`${Math.floor(m/60)}시간 ${m%60?m%60+'분':''}`.trim():`${m}분`;
+const trOff=()=>st.trMax>=75;
+function status(s){
+  if(s.car>st.carMax) return 'car';
+  if(!trOff() && s.t>st.trMax) return 'tr';
+  return 'ok';
+}
+const colorOf=k=>k==='ok'?'var(--ok)':k==='tr'?'var(--pw)':'var(--warn)';
+function trTier(t){return t<=30?['g','가뿐']:t<=45?['y','보통']:['r','멀다']}
+function lnPill(line){
+  return line.split('·').map(l=>`<span class="ln ${l.includes('호선')?'sub':'bus'}">${esc(l)}</span>`).join(' ');
+}
+function routeHTML(line,from,to,walk){
+  return `<span class="route">${lnPill(line)}<span>${esc(from)}</span><span class="arrow">→</span><span>${esc(to)}</span><span class="walk">· 도보 ${walk}분</span></span>`;
+}
+
+/* ---------- map ---------- */
+const W=720,PAD=46;
+const kx=Math.cos(HOME.lat*Math.PI/180)*111320, ky=110940;
+const pts=S.map(s=>({x:(s.lon-HOME.lon)*kx,y:(s.lat-HOME.lat)*ky}));
+const xs=pts.map(p=>p.x).concat(0), ys=pts.map(p=>p.y).concat(0);
+const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
+const sc=(W-2*PAD)/(maxX-minX);
+const H=Math.round((maxY-minY)*sc+2*PAD);
+const P=(x,y)=>[PAD+(x-minX)*sc, PAD+(maxY-y)*sc];
+const [hx,hy]=P(0,0);
+S.forEach((s,i)=>{const [x,y]=P(pts[i].x,pts[i].y);s.px=x;s.py=y;s.dist=Math.hypot(pts[i].x,pts[i].y)/1000;});
+// 3호선 역 (카카오맵 좌표)
+const STN=[["대곡",126.81093113,37.63169736],["화정",126.83268842,37.63464401],["원당",126.84291844,37.65311021],["원흥",126.87302523,37.65069218],["삼송",126.8957339,37.65326512],["지축",126.91385427,37.64814864]]
+  .map(([n,lon,lat])=>{const [x,y]=P((lon-HOME.lon)*kx,(lat-HOME.lat)*ky);return {n:n+'역',x:Math.min(Math.max(x,8),W-8),y};});
+
+// label placement (greedy, avoids overlap)
+function placeLabels(){
+  const boxes=S.map(s=>({x:s.px-8,y:s.py-8,w:16,h:16}));
+  boxes.push({x:hx-14,y:hy-14,w:28,h:28},{x:hx-62,y:hy-36,w:124,h:18});
+  STN.forEach(t=>{const w=t.n.length*11+4;t.lx=Math.max(2,Math.min(W-w-2,t.x-w/2));t.ly=t.y+19;boxes.push({x:t.x-6,y:t.y-6,w:12,h:12},{x:t.lx,y:t.y+8,w,h:14});});
+  const hit=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  const order=S.map((s,i)=>i).sort((a,b)=>S[a].px-S[b].px);
+  order.forEach(i=>{
+    const s=S[i],w=s.n.length*12.5+4,h=15;
+    const cands=[[10,-h/2],[-10-w,-h/2],[-w/2,-10-h],[-w/2,10],[8,-h-4],[8,4],[-8-w,-h-4],[-8-w,4],[14,-h/2-12],[14,-h/2+12],[-14-w,-h/2-12],[-14-w,-h/2+12]];
+    let best=cands[0],bx;
+    for(const c of cands){const b={x:s.px+c[0],y:s.py+c[1],w,h};if(b.x<2||b.x+w>W-2||b.y<2||b.y+h>H-2)continue;if(!boxes.some(o=>hit(o,b))){best=c;bx=b;break;}}
+    if(!bx)bx={x:s.px+best[0],y:s.py+best[1],w,h};
+    boxes.push(bx);s.lx=bx.x;s.ly=bx.y+h-3;
+  });
+}
+placeLabels();
+
+function drawMap(){
+  const rings=[2,4,6,8,10].map(k=>{const r=k*1000*sc;return `<circle cx="${hx}" cy="${hy}" r="${r}" fill="none" stroke="var(--ring)" stroke-width="1.5" stroke-dasharray="5 5"/>${k<=6?`<text x="${hx+4}" y="${hy+r-4}" style="font-size:11px;font-weight:700;fill:var(--muted)">${k}km</text>`:''}`}).join('');
+  const line3=`<polyline points="${STN.map(t=>t.x+','+t.y).join(' ')}" fill="none" stroke="var(--sub3)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>`+
+    STN.map(t=>`<circle cx="${t.x}" cy="${t.y}" r="5" fill="var(--mapbg)" stroke="var(--sub3)" stroke-width="2.5"/><text x="${t.lx+2}" y="${t.ly}" style="font-size:11px;font-weight:700;fill:var(--sub3);paint-order:stroke;stroke:var(--mapbg);stroke-width:3px">${t.n}</text>`).join('')+
+    `<text x="${(STN[4].x+STN[5].x)/2}" y="${(STN[4].y+STN[5].y)/2-12}" text-anchor="middle" style="font-size:11.5px;font-weight:800;fill:var(--sub3)">3호선</text>`;
+  let sel='';
+  const ss=S.find(s=>s.n===st.sel);
+  if(ss) sel=`<line x1="${hx}" y1="${hy}" x2="${ss.px}" y2="${ss.py}" stroke="var(--accent)" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round"/>`;
+  const mks=S.map(s=>{
+    const k=status(s), dim=st.show==='pass'&&k!=='ok';
+    return `<g class="mk${st.sel===s.n?' sel':''}${dim?' dim':''}" data-n="${esc(s.n)}" tabindex="0" role="button" aria-label="${esc(s.n)}초등학교 자동차 ${s.car}분 대중교통 ${s.t}분">
+      <circle cx="${s.px}" cy="${s.py}" r="15" fill="transparent"/>
+      <circle class="dot" cx="${s.px}" cy="${s.py}" r="${st.sel===s.n?9:7}" fill="${colorOf(k)}"/>
+      <text x="${s.lx}" y="${s.ly}">${esc(s.n)}</text></g>`;
+  }).join('');
+  const home=`<g><rect x="${hx-13}" y="${hy-13}" width="26" height="26" rx="7" fill="var(--hl)" stroke="var(--ink)" stroke-width="2.5"/><text x="${hx}" y="${hy+5}" text-anchor="middle" style="font-size:14px;font-weight:900">집</text><text x="${hx}" y="${hy-21}" text-anchor="middle" style="font-size:11.5px;font-weight:800;paint-order:stroke;stroke:var(--mapbg);stroke-width:3.5px">우리집</text></g>`;
+  const north=`<g transform="translate(${W-34},30)"><path d="M0 -14 L7 6 L0 2 L-7 6 Z" fill="var(--ink)"/><text x="0" y="20" text-anchor="middle" style="font-size:11px;font-weight:800">N</text></g>`;
+  $('#map').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="출발지 기준 덕양구 초등학교 위치"><rect x="0" y="0" width="${W}" height="${H}" rx="10" fill="var(--mapbg)"/>${rings}${line3}${sel}${mks}${home}${north}</svg>`;
+  document.querySelectorAll('.mk').forEach(g=>{
+    g.addEventListener('click',()=>select(g.dataset.n));
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(g.dataset.n)}});
+  });
+}
+
+/* ---------- side ---------- */
+function drawStats(){
+  const ok=S.filter(s=>status(s)==='ok'), carOver=S.filter(s=>s.car>st.carMax), fast=ok.filter(s=>s.t<=30);
+  $('#kstat').innerHTML=`<div class="g"><b>${ok.length}곳</b><span>두 조건 모두 충족</span></div>
+    <div class="r"><b>${carOver.length}곳</b><span>차로 ${st.carMax}분 초과</span></div>
+    <div><b>${fast.length}곳</b><span>그중 대중교통 30분 이내</span></div>`;
+  const list=ok.slice().sort((a,b)=>a.t-b.t||a.car-b.car);
+  $('#rank').innerHTML=list.length?list.map((s,i)=>`<div class="rk${st.sel===s.n?' sel':''}" data-n="${esc(s.n)}"><span class="no">${i+1}</span><span>${esc(s.n)}<small>${esc(s.line)}</small></span><span class="tm">🚌 ${fmt(s.t)} · 🚗 ${s.car}분</span></div>`).join(''):'<p class="hint">조건에 맞는 학교가 없어요. 위 슬라이더를 늘려 보세요.</p>';
+  document.querySelectorAll('.rk').forEach(r=>r.addEventListener('click',()=>select(r.dataset.n)));
+}
+function drawSel(){
+  const s=S.find(x=>x.n===st.sel);
+  if(!s){$('#selCard').innerHTML='<p class="hint">지도의 점이나 아래 표의 학교를 누르면 자동차·대중교통 시간과 탈 노선이 여기에 나와요.</p>';return;}
+  const k=status(s);
+  const msg=k==='ok'?['good',`조건 충족 · 차 ${st.carMax}분 이내, 환승 없이 한 번에`]:k==='tr'?['mid',`차는 OK · 대중교통이 ${st.trMax}분 넘음`]:['bad',`차로 ${st.carMax}분 넘음`];
+  const [tc,tl]=trTier(s.t);
+  const alts=s.alts.length?`<ul class="alts">${s.alts.map(a=>`<li><span class="tm">${fmt(a[0])}</span>${routeHTML(a[2],a[3],a[4],a[1])}</li>`).join('')}</ul>`:'<p class="hint" style="margin-top:6px">다른 무환승 경로는 없어요.</p>';
+  $('#selCard').innerHTML=`<div class="selname">${esc(s.n)}초등학교</div>
+    <div class="addr">고양시 덕양구 ${esc(s.addr)} · 직선 ${s.dist.toFixed(1)}km</div>
+    <p class="selstate ${msg[0]}">${msg[1]}</p>
+    <div class="two">
+      <div><div class="k">🚗 자동차</div><div class="v">${s.car}분<small>${s.km}km</small></div></div>
+      <div><div class="k">🚌 대중교통 <span class="tag ${tc}">${tl}</span></div><div class="v">${fmt(s.t)}<small>도보 ${s.walk}분 포함</small></div></div>
+    </div>
+    <div style="font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:4px">가장 빠른 무환승 경로</div>
+    ${routeHTML(s.line,s.from,s.to,s.walk)}
+    <details style="margin-top:10px;border-top:2px dashed var(--line);padding-top:8px"${s.alts.length?'':' hidden'}><summary style="cursor:pointer;font-weight:700;font-size:13.5px">다른 무환승 경로 ${s.alts.length}개</summary>${alts}</details>`;
+}
+
+/* ---------- table ---------- */
+function drawTable(){
+  const maxCar=Math.max(...S.map(s=>s.car)), maxT=Math.max(...S.map(s=>s.t));
+  const rank={ok:0,tr:1,car:2};
+  const rows=S.slice().sort((a,b)=>{
+    const k=st.sort;
+    if(k==='n')return a.n.localeCompare(b.n,'ko');
+    if(k==='ok')return rank[status(a)]-rank[status(b)]||a.t-b.t;
+    return a[k]-b[k]||a.t-b.t;
+  }).filter(s=>st.show==='all'||status(s)==='ok');
+  $('#tbl tbody').innerHTML=rows.map(s=>{
+    const k=status(s),[tc,tl]=trTier(s.t);
+    const verdict=k==='ok'?'<span class="tag g">충족</span>':k==='tr'?'<span class="tag y">대중교통 김</span>':'<span class="tag r">차 초과</span>';
+    return `<tr class="${st.sel===s.n?'cur':''}${k!=='ok'?' out':''}" data-n="${esc(s.n)}">
+      <td class="nm">${esc(s.n)}</td>
+      <td class="num">${s.car}분<small>${s.km}km</small><span class="bar2" style="width:${Math.round(s.car/maxCar*100)}%;background:${s.car>st.carMax?'var(--warn)':'var(--ok)'}"></span></td>
+      <td class="num">${fmt(s.t)} <span class="tag ${tc}">${tl}</span><span class="bar2" style="width:${Math.round(s.t/maxT*100)}%;background:var(--accent)"></span></td>
+      <td class="num" style="min-width:0">${s.walk}분</td>
+      <td>${routeHTML(s.line,s.from,s.to,s.walk).replace(/<span class="walk">.*?<\/span>/,'')}</td>
+      <td>${verdict}</td></tr>`;
+  }).join('');
+  document.querySelectorAll('#tbl tbody tr').forEach(tr=>tr.addEventListener('click',()=>{select(tr.dataset.n);document.querySelector('#map').scrollIntoView({behavior:'smooth',block:'start'})}));
+  document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.classList.toggle('on',th.dataset.k===st.sort));
+}
+
+function select(n){st.sel=st.sel===n?null:n;render();}
+function render(){drawMap();drawStats();drawSel();drawTable();}
+
+/* ---------- controls ---------- */
+$('#carMax').addEventListener('input',e=>{st.carMax=+e.target.value;$('#carMaxV').textContent=st.carMax+'분 이내';render();});
+$('#trMax').addEventListener('input',e=>{st.trMax=+e.target.value;$('#trMaxV').textContent=trOff()?'제한 없음':st.trMax+'분 이내';render();});
+document.querySelectorAll('#showSeg button').forEach(b=>b.addEventListener('click',()=>{st.show=b.dataset.s;segOn('#showSeg',b);render();}));
+document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.addEventListener('click',()=>{st.sort=th.dataset.k;drawTable();}));
+function segOn(sel,btn){document.querySelectorAll(sel+' button').forEach(x=>x.classList.toggle('on',x===btn));}
+function setTheme(t){document.documentElement.setAttribute('data-theme',t);segOn('#themeSeg',document.querySelector(`#themeSeg [data-th="${t}"]`));}
+document.querySelectorAll('#themeSeg button').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.th)));
+{const d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;segOn('#themeSeg',document.querySelector(`#themeSeg [data-th="${d?'dark':'light'}"]`));}
+segOn('#showSeg',document.querySelector('#showSeg [data-s="all"]'));
+render();
+</script>
+</body>
+</html>
